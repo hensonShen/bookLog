@@ -1,0 +1,68 @@
+创建模块(exports 是模块公开的接口)
+在 Node.js 中，创建一个模块非常简单，因为一个文件就是一个模块，我们要关注的问
+题仅仅在于如何在其他文件中获取这个模块。Node.js 提供了 exports 和 require 两个对
+象，其中 exports 是模块公开的接口，require 用于从外部获取一个模块的接口，即所获
+取模块的 exports 对象。
+
+
+单次加载
+上面这个例子有点类似于创建一个对象，但实际上和对象又有本质的区别，因为
+require 不会重复加载模块，也就是说无论调用多少次 require，获得的模块都是同一个。
+我们在 getmodule.js 的基础上稍作修改：
+//loadmodule.js
+var hello1 = require('./module');
+hello1.setName('BYVoid');
+var hello2 = require('./module');
+hello2.setName('BYVoid 2');
+hello1.sayHello();
+运行后发现输出结果是 Hello BYVoid 2，这是因为变量 hello1 和 hello2 指向的是
+同一个实例，因此 hello1.setName 的结果被 hello2.setName 覆盖，最终输出结果是
+由后者决定的。
+
+覆盖 exports
+有时候我们只是想把一个对象封装到模块中，例如：
+//singleobject.js
+function Hello() {
+var name;
+this.setName = function (thyName) {
+name = thyName;
+};
+
+this.sayHello = function () {
+console.log('Hello ' + name);
+};
+};
+exports.Hello = Hello;
+此时我们在其他文件中需要通过 require('./singleobject').Hello 来获取
+Hello 对象，这略显冗余，可以用下面方法稍微简化：
+
+//hello.js
+function Hello() {
+var name;
+this.setName = function(thyName) {
+name = thyName;
+};
+this.sayHello = function() {
+console.log('Hello ' + name);
+};
+};
+module.exports = Hello;
+这样就可以直接获得这个对象了：
+//gethello.js
+var Hello = require('./hello');
+hello = new Hello();
+hello.setName('BYVoid');
+hello.sayHello();
+注意，模块接口的唯一变化是使用 module.exports = Hello 代替了 exports.Hello=
+Hello。在外部引用该模块时，其接口对象就是要输出的 Hello 对象本身，而不是原先的
+exports。
+事实上，exports 本身仅仅是一个普通的空对象，即 {}，它专门用来声明接口，本
+质上是通过它为模块闭包①的内部建立了一个有限的访问接口。因为它没有任何特殊的地方，
+所以可以用其他东西来代替，譬如我们上面例子中的 Hello 对象。
+
+不可以通过对 exports 直接赋值代替对 module.exports 赋值。
+exports 实际上只是一个和 module.exports 指向同一个对象的变量，
+它本身会在模块执行结束后释放，但 module 不会，因此只能通过指定
+module.exports 来改变访问接口。
+
+
